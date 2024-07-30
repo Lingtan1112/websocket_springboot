@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+
+</head>
+
+<body>
+
+    <input id="message"><br/><br/><br/>
+    <button id="sendMessage">Send Message</button>
+    <br />
+  
+    <div id="messages">
+
+    </div>
+    
+    <div id="login-container">
+        <input id="username">
+        <button id="login">Login</button>
+    </div>
+
+    <div id="container" style="display:none">
+        <input id="count" min="500" value="500"><br/>
+        <button id="generate">Submit</button><br/><span id="progress" style="color:green"></span><br/>
+        <textarea id="message"></textarea>
+    </div>
+   
+    <script>
+        $(document).ready(function(){
+            let socket = new SockJS("ws");
+            let stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function(frame){
+                console.log("Connected to Websocket :::: "+frame);
+                stompClient.subscribe("/topic/messages", function(message){
+                    $("#messages").append(`<span>${message.body}<span/><br>`);
+                });
+
+                stompClient.subscribe("/topic/progress", function(message){
+                    $("#progress").text(message.body);
+                });
+
+
+                stompClient.subscribe(`/user/${$("#username").val()}/queue/progress`, function(message){
+                    $("#progress").text(message.body);
+                });
+
+            }, function(error){
+                console.log("Error :::: "+error);
+            });
+
+            $(document).on('click', '#sendMessage', function(){
+                stompClient.send("/app/sendMessage", {}, $("#message").val());
+            });
+
+            $(document).on('click', '#generate', function(){
+                $.ajax({
+                    url:`/generate/${$("#username").val()}/${$("#count").val()}`,
+                    type:"GET",
+                    success:function(data){
+                        // alert("Alert :: " + data);
+                    }
+                })
+            });
+        
+            $(document).on('click', '#login', function(){
+                $.ajax({
+                    url:`/login/${$("#username").val()}`,
+                    type:"GET",
+                    success:function(data){
+                        $("#login-container").hide();
+                        $("#container").show();
+                        $("#username").val($("#username").val());
+                    }
+                })
+            });
+
+        });
+       
+
+    </script>
+</body>
+
+</html>
